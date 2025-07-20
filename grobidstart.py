@@ -37,7 +37,7 @@ def process_grobids(args: tuple[List[Path], Path, int], grobid_url: str = "http:
 
     return failed_results
 
-def process_results(failed_grobes: List[Path]):
+def process_results(failed_grobes: List[Path], output_root: Path):
     NoGrobjson = output_root / "GroBid_Fails.json"
     NoGrobes = []
     for pdf in failed_grobes:
@@ -89,4 +89,4 @@ if __name__ == "__main__":
     grob_args = input_paths, output_path, args.workers
     # Run the batch processing
     #failed_grobes = process_grobids(grob_args)
-    process_results(process_grobids(grob_args))
+    process_results(process_grobids(grob_args), output_path)

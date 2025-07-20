@@ -29,4 +29,4 @@ if __name__ == "__main__":
 
     workers = os.cpu_count() - 1
     grob_args = pdf_paths, out_dir, workers
-    process_results(process_grobids(grob_args))
+    process_results(process_grobids(grob_args), out_dir)
