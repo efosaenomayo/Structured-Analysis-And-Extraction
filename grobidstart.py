@@ -42,7 +42,7 @@ def process_results(failed_grobes: List[Path], output_root: Path):
     for pdf in failed_grobes:
         NoGrobes.append({
             'title': pdf.name,
-            'PDF path': pdf
+            'PDF path': str(pdf)
         })
     NoGrobjson.write_text(json.dumps(NoGrobes, ensure_ascii=False, indent=2), encoding="utf-8")
 
