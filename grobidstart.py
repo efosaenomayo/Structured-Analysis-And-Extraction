@@ -9,7 +9,7 @@ from grobidParse import grobid_process
 def process_grobids(args: tuple[List[Path], Path, int], grobid_url: str = "http://localhost:8070",
     full_dump: bool = True,
     all_dump: bool = False) -> List[Path]:
-    inputs, output, workers =  args
+    inputs, output_dir, workers =  args
 
     failed_results = []
 
@@ -17,11 +17,10 @@ def process_grobids(args: tuple[List[Path], Path, int], grobid_url: str = "http:
     # Single file or list of PDF paths
     pdf_paths = inputs if isinstance(inputs, list) else [inputs]
     #pdf_paths = [Path(p) for p in paths if Path(p).is_file() and Path(p).suffix.lower() == ".pdf"]
-    output_root = Path("output") if not output else None
 
     with ProcessPoolExecutor(max_workers=workers) as pool:
         # Set up the future tasks
-        futures = {pool.submit(grobid_process, pdf, grobid_url, output_root, full_dump, all_dump): pdf for pdf in pdf_paths}
+        futures = {pool.submit(grobid_process, pdf, grobid_url, output_dir, full_dump, all_dump): pdf for pdf in pdf_paths}
 
         # Process futures as they complete
         pbar = tqdm(as_completed(futures), total=len(pdf_paths), desc="Processing PDFs")
