@@ -63,11 +63,10 @@ def grobid_process(pdf_path: pathlib.Path,
             json_file.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
             logging.info("✅  %s – JSON saved → %s  (%.2f s)",
                      pdf_path.name, json_file, (datetime.now() - t0).total_seconds())
-        else:
-            return dict_header, refs_dict
+        return dict_header, refs_dict
     except Exception as exc:
         logging.error("❌  %s – TEI→JSON conversion failed: %s", pdf_path.name, exc)
-    return None
+        return None
 
 
 if __name__ == "__main__":
