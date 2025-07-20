@@ -77,6 +77,6 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s",
                         level=logging.DEBUG)
     logging.info("STARTING!!!!!")
-    grobid_process(pdf_path, grobid_url, out_path)
+    grobid_process(pdf_path, grobid_url, out_path, all_dump=True)
 
 
