@@ -23,7 +23,7 @@ if __name__ == "__main__":
         pdf_paths = failed_list
     elif json_typs.is_file():"""
     with json_typs.open() as f:
-        #pdf_paths = [k['pdf_path'] for k in json.load(f)]
+        #pdf_paths = [Path(k['pdf_path']) for k in json.load(f)]
         pdf_paths = list(itertools.islice((Path(k['pdf_path']) for k in json.load(f)), 10))
     logging.info(f"Starting parallel parsing on {len(pdf_paths)} PDFs.")
 

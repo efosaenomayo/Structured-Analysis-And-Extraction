@@ -3,6 +3,7 @@ from datetime import datetime
 from tqdm import tqdm
 from grobidParseFuncs import _post_pdf, _tei_refs_to_ieee_json, _tei_header_to_ieee_json
 from typing import Optional, Tuple, Dict, Any, List
+from pre_ocr import _byte_ocr
 
 def grobid_process(pdf_path: pathlib.Path,
                    grobid_url: str,
@@ -15,9 +16,10 @@ def grobid_process(pdf_path: pathlib.Path,
     logging.info("🟡  %s – start", pdf_path.name)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+
     # 1) read bytes once
     try:
-        pdf_bytes = pdf_path.read_bytes()
+        pdf_bytes = _byte_ocr(pdf_path)
         logging.debug("Read %d bytes from %s", len(pdf_bytes), pdf_path)
     except Exception as exc:
         logging.error("❌  %s – cannot read PDF: %s", pdf_path.name, exc)
@@ -72,10 +74,10 @@ def grobid_process(pdf_path: pathlib.Path,
 if __name__ == "__main__":
     grobid_url = "http://localhost:8070"
     DocFolds = pathlib.Path(os.environ.get('DiffAmp'))
-    pdf_path = DocFolds/'6H-SiC JFETs for 450 °C Differential Sensing Applications.pdf'
+    pdf_path = DocFolds/'A 5.8 GHz Implicit Class-F VCO in 180-nm CMOS Technology.pdf'
     out_path = DocFolds/pdf_path.stem
     logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s",
-                        level=logging.DEBUG)
+                        level=logging.INFO)
     logging.info("STARTING!!!!!")
     grobid_process(pdf_path, grobid_url, out_path, all_dump=True)
 

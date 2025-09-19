@@ -1,5 +1,4 @@
 import argparse, json, logging, pathlib, os
-from datetime import datetime
 from tqdm import tqdm
 from pathlib import Path
 from typing import Union, List

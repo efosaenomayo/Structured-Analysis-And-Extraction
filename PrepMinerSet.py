@@ -22,4 +22,4 @@ if __name__ == '__main__':
 
         typical_research_pdfs = [pdf_dict.get('pdf_path') for pdf_dict in research_art_dicts]
         output_fold = str(DocFolds/"EvalOuts")
-        run_parallel(typical_research_pdfs, output_fold)
+        run_parallel(typical_research_pdfs, output_fold, 8)

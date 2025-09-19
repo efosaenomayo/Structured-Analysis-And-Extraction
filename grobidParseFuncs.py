@@ -7,11 +7,16 @@ from lxml import etree as ET
 # ──────────────────────────────────────────────────────────────
 TEI_NS = {"tei": "http://www.tei-c.org/ns/1.0"}
 
-def _post_pdf(pdf_bytes: bytes, endpoint: str, *, consolidate: str, timeout: int = 120) -> str:
+def _post_pdf(pdf_bytes: bytes, endpoint: str, *, consolidate: str, timeout: int = 120,
+		extra_headers:dict | None = None) -> str:
     """Send a PDF to one Grobid endpoint, return raw TEI XML."""
     files = {"input": ("doc.pdf", pdf_bytes, "application/pdf")}
     data  = {consolidate: "1"}          # 1 = yes, normalise
-    r = requests.post(endpoint, files=files, data=data, timeout=timeout)
+    headers = {"Accept": "application/xml"}
+    if extra_headers:
+        headers.update(extra_headers)
+        
+    r = requests.post(endpoint, files=files, data=data, headers=headers, timeout=timeout)
     r.raise_for_status()
     return r.text
 
