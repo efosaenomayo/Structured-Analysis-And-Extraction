@@ -1,4 +1,4 @@
-import argparse, json, logging, pathlib, os
+import argparse, json, logging, os
 from tqdm import tqdm
 from pathlib import Path
 from typing import Union, List
