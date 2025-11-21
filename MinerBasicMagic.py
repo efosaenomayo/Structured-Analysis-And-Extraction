@@ -1,65 +1,94 @@
 import os
-import time
+import time, json
+from typing import Any, List
 import logging
 from pathlib import Path
-from magic_pdf.data.data_reader_writer import FileBasedDataWriter, FileBasedDataReader
-from magic_pdf.data.dataset import PymuDocDataset
-from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
-from magic_pdf.config.enums import SupportedPdfParseMethod
-from magic_pdf.model.pp_structure_v2 import CustomPaddleModel
 
-def minermagic(pdf_file: str, out_dir: str, full_dump: bool=True):
-    # Create custom OCR model with specific parameters
-    """ocr_model = CustomPaddleModel(
-        ocr=True,
-        show_log=True,
-        lang="en",
-        det_db_box_thresh=0.4,
-        use_dilation=True,
-        det_db_unclip_ratio=2.0
-    )"""
+from mineru.cli.common import read_fn, prepare_env
+from mineru.data.data_reader_writer import FileBasedDataWriter
+from mineru.utils.enum_class import MakeMode
+from mineru.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
+from mineru.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
+from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
 
-    # 1) Input PDF + name prefix
-    #pdf_file_name = pdf_file
-    #timers = time.perf_counter()
-    name_root      = Path(pdf_file).stem
 
-    # 2) Where to dump images & JSON
-    image_out_dir = os.path.join(out_dir, "figures and tables")
-    json_dir  = out_dir
-    os.makedirs(image_out_dir, exist_ok=True)
-    #print(image_out_dir)
+def minermagic(pdf_file: str, out_dir: str, full_dump: bool = True) -> List[dict[str, Any]] | None:
+    """
+    Run MinerU (pipeline backend) on a single PDF.
 
-    # Writers
-    image_writer = FileBasedDataWriter(image_out_dir)
-    json_writer  = FileBasedDataWriter(json_dir)
+    - If full_dump is True: write <stem>_content_list.json (and images)
+      under out_dir/<stem>/<parse_method>/, and return None.
+    - If full_dump is False: return the content_list as a Python list
+      and still use MinerU's standard directory layout for images.
+    """
+    pdf_path = Path(pdf_file).expanduser().resolve()
+    if not pdf_path.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path}")
+    pdf_name = pdf_path.stem
+    out_root = Path(out_dir).expanduser().resolve()
+    out_root.mkdir(parents=True, exist_ok=True)
 
-    # 3) Read PDF bytes
-    reader    = FileBasedDataReader("")
-    pdf_bytes = reader.read(pdf_file)
+    # 1) Read PDF bytes (handles images→PDF conversion if needed)
+    pdf_bytes = read_fn(pdf_path)
 
-    # 4) Build dataset + infer
-    ds        = PymuDocDataset(pdf_bytes, lang="en")
-    use_ocr   = ds.classify() == SupportedPdfParseMethod.OCR
-    infer_res = ds.apply(doc_analyze, ocr=use_ocr, show_log=True)
+    # 2) Run pipeline backend for a single PDF
+    pdf_bytes_list = [pdf_bytes]
+    lang_list = ["en"]  # or [""] to let MinerU infer/guess
+    parse_method = "auto"
 
-    # 5) Run the pipeline in the correct mode (this will save all cropped images)
-    pipe_res  = infer_res.pipe_ocr_mode(image_writer) if use_ocr \
-                else infer_res.pipe_txt_mode(image_writer)
+    (infer_results, all_image_lists,
+     all_pdf_docs,out_lang_list,
+        ocr_enabled_list) = pipeline_doc_analyze(pdf_bytes_list,lang_list,
+                                                 parse_method=parse_method,formula_enable=True,
+                                                 table_enable=True,)
 
-    #elapsed = time.perf_counter() - timers
-    #print(f"Total processing time: {elapsed:.2f} seconds")
-    # 6) Dump _only_ the content list JSON (with image references)
+    # We only have one document: use index 0
+    model_list = infer_results[0]
+    images_list = all_image_lists[0]
+    pdf_doc = all_pdf_docs[0]
+    _lang = out_lang_list[0]
+    _ocr_enable = ocr_enabled_list[0]
+
+    # 3) Where to put images + JSON
+    local_image_dir, local_md_dir = prepare_env(str(out_root), pdf_name, parse_method)
+    image_writer = FileBasedDataWriter(local_image_dir)
+    md_writer = FileBasedDataWriter(local_md_dir)
+
+    # 4) Convert model output → middle_json (successor of PipeResult internals)
+    middle_json = pipeline_result_to_middle_json(
+        model_list,
+        images_list,
+        pdf_doc,
+        image_writer,
+        _lang,
+        _ocr_enable,
+        True,
+    )
+    pdf_info = middle_json["pdf_info"]
+
+    # 5) Build content_list (successor of PipeResult.get_content_list)
+    image_dir_name = os.path.basename(local_image_dir)
+    content_list = pipeline_union_make(pdf_info, MakeMode.CONTENT_LIST, image_dir_name)
+
+    # 6) Dump / return
     if full_dump:
-        pipe_res.dump_content_list(
-            json_writer,
-            f"{name_root}_content_list.json",
-            os.path.basename(image_out_dir)
+        # Write content_list.json similar to old behavior (different path layout)
+        md_writer.write_string(
+            f"{pdf_name}_content_list.json",
+            json.dumps(content_list, ensure_ascii=False, indent=4),
         )
+
+        # Optionally also dump middle_json for debugging:
+        md_writer.write_string(
+            f"{pdf_name}_middle.json",
+            json.dumps(middle_json, ensure_ascii=False, indent=4),
+        )
+
+        logging.info("MinerU pipeline finished for %s → %s", pdf_name, local_md_dir)
         return None
     else:
-        return pipe_res.get_content_list(os.path.basename(image_out_dir))
-
+        # Parser.py expects a Python list, not a file.
+        return content_list
 
 if __name__ == '__main__':
     logging.basicConfig(
