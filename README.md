@@ -1,93 +1,95 @@
-# Structured Analysis And Extraction
+# Structured Analysis and Extraction
 
+A collection of Python scripts for turning PDFs into structured JSON plus cropped figure/table images. The toolkit wraps the [magic-pdf (MinerU)](https://github.com/opendatalab/MinerU) library for layout-aware parsing and can optionally enrich outputs with metadata from a Grobid server.
 
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Dependencies and Environment](#dependencies-and-environment)
+3. [Installation](#installation)
+4. [Core Workflows](#core-workflows)
+   - [MinerU-only parsing](#mineru-only-parsing)
+   - [Full pipeline (MinerU + Grobid)](#full-pipeline-mineru--grobid)
+5. [Outputs](#outputs)
+6. [Configuration and Options](#configuration-and-options)
+7. [Advanced Usage and Customization](#advanced-usage-and-customization)
+8. [Troubleshooting](#troubleshooting)
+9. [Acknowledgements](#acknowledgements)
 
-## Getting started
+## Introduction
+The scripts in this repository orchestrate MinerU to extract layout-aware content from PDFs (text, figures, tables) and convert it into structured JSON. Optional Grobid integration adds bibliographic header and reference metadata. The outputs are designed to support downstream analysis tasks such as citation resolution or dataset creation.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.lrz.de/000000000149F358/Structured-Analysis-And-Extraction.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.lrz.de/000000000149F358/Structured-Analysis-And-Extraction/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Dependencies and Environment
+- **Python**: 3.10 or newer is recommended.
+- **CUDA-capable GPU**: Strongly recommended for speed. CPU works but is slower. Ensure GPU drivers match the installed PyTorch build.
+- **System libraries**: Packages required by `magic-pdf` (e.g., `libgl1`, `libglib2.0` on Ubuntu) and any system fonts your PDFs may rely on.
+- **Python libraries**:
+  - `magic-pdf` (MinerU) ≥ 0.8
+  - `torch`, `torchvision`, `torchaudio` built for your CUDA toolkit (or CPU wheels if running on CPU)
+  - `requests` (for Grobid HTTP calls)
+- **Optional services**: Access to a running Grobid server if you want metadata enrichment.
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Install Python dependencies (adjust the PyTorch wheel URL to match your CUDA version or use CPU wheels):
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+```bash
+pip install -U pip
+pip install "magic-pdf>=0.8" torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121
+pip install requests
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+Verify MinerU is available:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```bash
+python -c "import magic_pdf; print(magic_pdf.__version__)"
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+## Core Workflows
+### MinerU-only parsing
+Parse a single PDF and write outputs next to the input under an `output/` folder:
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```bash
+python MinerMagic.py /path/to/paper.pdf
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+Parse a directory recursively with 8 workers and place results elsewhere:
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```bash
+python MinerMagic.py /path/to/pdfs --recursive -j 8 -o /path/to/results
+```
 
-## License
-For open source projects, say how it is licensed.
+### Full pipeline (MinerU + Grobid)
+Set the environment variables and run the orchestrator to parse PDFs and merge Grobid metadata when available:
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```bash
+export IEEE_REPO=/data/predictions            # where final per-paper outputs go
+export DiffAmp=/data/papers                  # default input search path (optional if you pass explicit paths)
+python Parser.py
+```
+
+`Parser.py` parallelizes MinerU parsing, flattens the hierarchical output, merges Grobid header/reference metadata, and writes per-paper prediction folders under `${IEEE_REPO}`. If Grobid is unreachable, MinerU-only JSON is still produced.
+
+## Outputs
+- **MinerU artifacts**: For each PDF, an `output/` directory containing cropped images for figures and tables plus `<pdf>_content_list.json` describing layout content.
+- **Full pipeline results**: Under `${IEEE_REPO}`, each paper gets its own folder with flattened JSON suitable for downstream tasks, along with any merged Grobid header and reference data. Error summaries are emitted as JSON reports for failed documents.
+
+## Configuration and Options
+- **Input root (`DiffAmp`)**: Optional environment variable that points `Parser.py` to a default PDF directory when explicit paths are not provided.
+- **Output root (`IEEE_REPO`)**: Required for `Parser.py`; controls where per-paper prediction folders are written.
+- **Batch sizing (`MINERU_MIN_BATCH_INFERENCE_SIZE`)**: MinerU auto-tunes based on detected GPU VRAM; override this environment variable to balance throughput vs. memory usage.
+- **Language hints (`--lang`)**: Pass to MinerU runners for non-English PDFs to improve extraction quality.
+- **Worker counts (`-j`)**: Control parallelism for MinerU runners; reduce if you encounter GPU memory pressure.
+- **Grobid endpoints**: If using Grobid, ensure the server URL and ports are reachable from your environment; configure any required authentication per your deployment.
+
+## Advanced Usage and Customization
+- **Schema tuning**: `MagicJSONschema.py` reshapes MinerU output into a flatter schema. Adjust section handling, figure/table reference collection, or paragraph ordering here if your downstream consumers need different structures.
+- **Batch drivers**: `MinerParallel.py` and `MinerBasicMagic.py` provide alternative MinerU runners with varying defaults; inspect their CLI arguments for different batching and output behaviors.
+- **Post-processing utilities**: Scripts like `ParseMagicJSON.py`, `ParseReferences.py`, and `cleanMagicOut.py` offer ad-hoc cleanup, reference parsing, and inspection helpers that can be chained after MinerU runs.
+- **Upgrades**: When upgrading MinerU (`magic-pdf`), review release notes for model or schema changes. Re-validate custom schema code (`MagicJSONschema.py`) after upgrades to ensure compatibility. Likewise, align PyTorch wheels with your CUDA toolkit when updating.
+
+## Troubleshooting
+- **Import or GPU errors**: Confirm `magic-pdf` is installed in the active environment and that PyTorch matches your CUDA driver version.
+- **Out-of-memory or slow runs**: Lower `MINERU_MIN_BATCH_INFERENCE_SIZE`, reduce `-j`, or run on fewer PDFs to find stable settings for your GPU.
+- **Grobid failures**: The pipeline will still emit MinerU-only JSON. Check Grobid server health, network connectivity, and retry if metadata is missing.
+
+## Acknowledgements
+This project builds on the efforts of the MinerU team (magic-pdf) for layout-aware PDF parsing and the Grobid team for bibliographic metadata extraction.
